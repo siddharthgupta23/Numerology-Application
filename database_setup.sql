@@ -25,10 +25,10 @@ CREATE TABLE IF NOT EXISTS numerology_reports (
     FOREIGN KEY (userid) REFERENCES users(userid) ON DELETE CASCADE
 );
 
-DELETE FROM users
-WHERE userid = "sdfbsjd";
-DELETE FROM users
-WHERE userid = "Siddharth Gupta";
+--DELETE FROM users
+--WHERE userid = "sdfbsjd";
+--DELETE FROM users
+--WHERE userid = "Siddharth Gupta";
 
 
 select * from users;

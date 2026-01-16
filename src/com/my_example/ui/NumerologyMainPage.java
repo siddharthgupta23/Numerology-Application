@@ -7,6 +7,7 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
 import javax.swing.JButton;
@@ -151,14 +152,10 @@ public class NumerologyMainPage extends JFrame {
             return;
         }
 
-        // Parse date
-        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
-        Date dateOfBirth = null;
-        try {
-            dateOfBirth = sdf.parse(dobStr);
-        } catch (ParseException e) {
-            JOptionPane.showMessageDialog(this, "Invalid date format! Please use DD-MM-YYYY format.", "Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
+        // Validate and parse date
+        Date dateOfBirth = validateAndParseDate(dobStr);
+        if (dateOfBirth == null) {
+            return; // Error message already shown in validation method
         }
 
         try {
@@ -214,6 +211,121 @@ public class NumerologyMainPage extends JFrame {
             JOptionPane.showMessageDialog(this, "Error generating report: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * Validates and parses the date string
+     * @param dateStr Date string in DD-MM-YYYY format
+     * @return Parsed Date object if valid, null otherwise
+     */
+    private Date validateAndParseDate(String dateStr) {
+        // Check format first (should have exactly 2 hyphens)
+        if (!dateStr.matches("\\d{2}-\\d{2}-\\d{4}")) {
+            JOptionPane.showMessageDialog(this, 
+                "Invalid date format! Please use DD-MM-YYYY format.\nExample: 15-05-1990", 
+                "Validation Error", 
+                JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
+
+        // Split the date string to validate individual components
+        String[] parts = dateStr.split("-");
+        int day = Integer.parseInt(parts[0]);
+        int month = Integer.parseInt(parts[1]);
+        int year = Integer.parseInt(parts[2]);
+
+        // Validate day range (1-31)
+        if (day < 1 || day > 31) {
+            JOptionPane.showMessageDialog(this, 
+                "Invalid day! Day must be between 01 and 31.\nYou entered: " + day, 
+                "Validation Error", 
+                JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
+
+        // Validate month range (1-12)
+        if (month < 1 || month > 12) {
+            JOptionPane.showMessageDialog(this, 
+                "Invalid month! Month must be between 01 and 12.\nYou entered: " + month, 
+                "Validation Error", 
+                JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
+
+        // Validate year range (reasonable: 1900 to current year)
+        Calendar cal = Calendar.getInstance();
+        int currentYear = cal.get(Calendar.YEAR);
+        if (year < 1900 || year > currentYear) {
+            JOptionPane.showMessageDialog(this, 
+                "Invalid year! Year must be between 1900 and " + currentYear + ".\nYou entered: " + year, 
+                "Validation Error", 
+                JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
+
+        // Parse date with strict mode (non-lenient)
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
+        sdf.setLenient(false); // This prevents auto-correction of invalid dates
+        
+        Date dateOfBirth = null;
+        try {
+            dateOfBirth = sdf.parse(dateStr);
+            
+            // Verify the parsed date matches the input (catch any auto-corrections)
+            Calendar parsedCal = Calendar.getInstance();
+            parsedCal.setTime(dateOfBirth);
+            
+            int parsedDay = parsedCal.get(Calendar.DAY_OF_MONTH);
+            int parsedMonth = parsedCal.get(Calendar.MONTH) + 1; // Month is 0-indexed
+            int parsedYear = parsedCal.get(Calendar.YEAR);
+            
+            // If parsed values don't match input, it means date was invalid (e.g., 31-02-1990)
+            if (parsedDay != day || parsedMonth != month || parsedYear != year) {
+                JOptionPane.showMessageDialog(this, 
+                    "Invalid date! The date " + day + "-" + month + "-" + year + " does not exist in the calendar.\n" +
+                    "Examples of invalid dates:\n" +
+                    "- 31-02-1990 (February has only 28/29 days)\n" +
+                    "- 30-02-1990 (February has only 28/29 days)\n" +
+                    "- 32-01-1990 (January has only 31 days)", 
+                    "Invalid Date", 
+                    JOptionPane.ERROR_MESSAGE);
+                return null;
+            }
+            
+            // Check if date is in the future
+            Calendar today = Calendar.getInstance();
+            today.set(Calendar.HOUR_OF_DAY, 0);
+            today.set(Calendar.MINUTE, 0);
+            today.set(Calendar.SECOND, 0);
+            today.set(Calendar.MILLISECOND, 0);
+            
+            parsedCal.set(Calendar.HOUR_OF_DAY, 0);
+            parsedCal.set(Calendar.MINUTE, 0);
+            parsedCal.set(Calendar.SECOND, 0);
+            parsedCal.set(Calendar.MILLISECOND, 0);
+            
+            if (parsedCal.after(today)) {
+                JOptionPane.showMessageDialog(this, 
+                    "Invalid date! Date of birth cannot be in the future.\nYou entered: " + dateStr, 
+                    "Validation Error", 
+                    JOptionPane.ERROR_MESSAGE);
+                return null;
+            }
+            
+        } catch (ParseException e) {
+            JOptionPane.showMessageDialog(this, 
+                "Invalid date! The date " + dateStr + " does not exist in the calendar.\n" +
+                "Please check:\n" +
+                "- Day is valid for the given month (e.g., no 31st in February)\n" +
+                "- Month is between 01-12\n" +
+                "- Year is valid\n" +
+                "Example of valid date: 15-05-1990", 
+                "Validation Error", 
+                JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
+        
+        return dateOfBirth;
     }
 
     private void showNumerologySummary(NumerologyDTO numerologyDTO) {
